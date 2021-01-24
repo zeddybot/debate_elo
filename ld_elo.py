@@ -129,7 +129,7 @@ def main():
     """
 
     # Relevant file of URLs
-    DATASET = "stuff2"
+    DATASET = "ld_2017-21"
 
     # Extracts URLs from file
     with open(os.path.join("datasets", DATASET + ".txt"), "r") as f:
