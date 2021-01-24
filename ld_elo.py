@@ -7,6 +7,10 @@ from utils import get_html
 
 
 def info_to_url(nums):
+    """
+    Convert a pair of tournament ID and round ID to
+    a url that can be accessed through the requests library.
+    """
     params = {"tourn_id": nums[0], "round_id": nums[1]}
     return "https://www.tabroom.com/index/tourn/results/round_results.mhtml?" + urlencode(params)
 
