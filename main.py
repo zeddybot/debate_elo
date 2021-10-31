@@ -63,7 +63,8 @@ def process_round(round):
 
     # Filters out byes and forfeits, and makes elim rounds count more
     if len(info) >= 3:
-        winners = [div.string.strip() for div in info[2].find_all("div")]
+        winners = [div.string.strip().upper()
+                   for div in info[2].find_all("div")]
     else:
         winners = []
 
@@ -127,13 +128,39 @@ def calc_elo(elo, true, expected):
     return elo + 32 * (true - expected)
 
 
+def calc_winrates(rounds):
+    winrates = {}
+
+    for round in rounds:
+        aff = round.get("AFF")
+        neg = round.get("NEG")
+        winners = round.get("WINNERS")
+        if aff and neg and winners:
+            aff_wins = winners.count("AFF")
+            neg_wins = winners.count("NEG")
+            aff_wr = winrates.get(aff, [0, 0])
+            neg_wr = winrates.get(neg, [0, 0])
+            aff_wr[0] += aff_wins
+            neg_wr[0] += neg_wins
+            aff_wr[1] += aff_wins + neg_wins
+            neg_wr[1] += aff_wins + neg_wins
+            winrates.update({aff: aff_wr, neg: neg_wr})
+    return winrates
+
+
+def sort_and_eval_winrates(winrates):
+    items = [(name, wins / rounds)
+             for name, (wins, rounds) in winrates.items() if rounds > 0]
+    return dict(sorted(items, key=lambda item: item[1], reverse=True))
+
+
 def main():
     """
     Processes a list of tournaments.
     """
 
     # Relevant file of URLs
-    DATASET = "ld_2017-21"
+    DATASET = "ld_2020"
 
     # Extracts URLs from file
     with open(os.path.join("datasets", DATASET + ".txt"), "r") as f:
@@ -148,7 +175,7 @@ def main():
         rounds += all_rounds_from_tourney(url)
         # To avoid DDOSing Tabroom
         print("Sleeping...")
-        sleep(10)
+        # sleep(10)
 
     # Calculate and sort the ELOs
     print("Calculting ELOs...")
@@ -156,6 +183,13 @@ def main():
 
     print("Sorting ELOS...")
     elos = sort_elos(elos)
+
+    # Calculate and sort the Winrates
+    print("Calculating winrates...")
+    winrates = calc_winrates(rounds)
+
+    print("Sorting winrates...")
+    winrates = sort_and_eval_winrates(winrates)
 
     # Save all the data
     if not os.path.exists(DATASET):
@@ -171,11 +205,21 @@ def main():
     with open(os.path.join(DATASET, "elos.txt"), "w") as f:
         f.write(elos_json)
 
+    print("Saving winrates...")
+    winrates_json = json.dumps(winrates)
+    with open(os.path.join(DATASET, "winrates.txt"), "w") as f:
+        f.write(winrates_json)
+
     print("Saving Rankings...")
-    rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
-                         (name, elo) in enumerate(elos.items(), 1))
-    with open(os.path.join(DATASET, "rankings.txt"), "w") as f:
-        f.write(rankings)
+    elo_rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
+                             (name, elo) in enumerate(elos.items(), 1))
+    with open(os.path.join(DATASET, "elo_rankings.txt"), "w") as f:
+        f.write(elo_rankings)
+
+    wr_rankings = "\n".join(f"{n}. {name}: {winrate * 100}" for n,
+                            (name, winrate) in enumerate(winrates.items(), 1))
+    with open(os.path.join(DATASET, "winrate_rankings.txt"), "w") as f:
+        f.write(wr_rankings)
 
 
 if __name__ == "__main__":
