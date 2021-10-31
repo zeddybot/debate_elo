@@ -6,12 +6,13 @@ from urllib.parse import urlencode
 from web_utils import get_html
 
 
-def info_to_url(nums):
+def info_to_url(tournament):
     """
-    Convert a pair of tournament ID and round ID to
-    a url that can be accessed through the requests library.
+    Convert a list of tournaments to a url that can be accessed
+    through the requests library.
     """
-    params = {"tourn_id": nums[0], "round_id": nums[1]}
+    params = {"tourn_id": tournament["tourn_id"],
+              "round_id": tournament["round_id"]}
     return "https://www.tabroom.com/index/tourn/results/round_results.mhtml?" + urlencode(params)
 
 
@@ -160,11 +161,12 @@ def main():
     """
 
     # Relevant file of URLs
-    DATASET = "ld_2020"
+    DATASET = "new_ld_2020"
 
     # Extracts URLs from file
     with open(os.path.join("datasets", DATASET + ".txt"), "r") as f:
-        urls = [info_to_url(nums) for nums in json.loads(f.read())]
+        tournaments = json.loads(f.read())["Tournaments"]
+        urls = [info_to_url(nums) for nums in tournaments]
 
     # Process all tournaments into a list of hashmaps,
     # and print updates after every tournament is processed.
