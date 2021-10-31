@@ -161,10 +161,10 @@ def main():
     """
 
     # Relevant file of URLs
-    DATASET = "new_ld_2020"
+    DATASET = "new_ld_2020.json"
 
     # Extracts URLs from file
-    with open(os.path.join("datasets", DATASET + ".txt"), "r") as f:
+    with open(os.path.join("datasets", DATASET), "r") as f:
         tournaments = json.loads(f.read())["Tournaments"]
         urls = [info_to_url(nums) for nums in tournaments]
 
