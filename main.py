@@ -3,7 +3,7 @@ import os
 from math import floor
 from time import sleep
 from urllib.parse import urlencode
-from utils import get_html
+from web_utils import get_html
 
 
 def info_to_url(nums):
