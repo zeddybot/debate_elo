@@ -76,3 +76,10 @@ def all_rounds_from_tourney(tournament):
     rounds = [process_round(round) for round_url in round_urls
               for round in get_rounds(round_url)]
     return {"Tournament": tournament["Tournament"], "Rounds": rounds}
+
+
+def process_tournaments_data(tournaments_data):
+    tournaments = tournaments_data["Tournaments"]
+    new_tournaments = [all_rounds_from_tourney(tournament)
+                       for tournament in tournaments]
+    return {"Tournaments": new_tournaments}
