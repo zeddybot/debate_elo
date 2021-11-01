@@ -37,20 +37,24 @@ When the program is run in append mode, no change is made to the `--rank` functi
 
 Suppose you have four files, `ld_2017.json`, `ld_2018.json`, `ld_2019.json`, and `ld_2020.json`, each of which contains tournament data from its respective year. If you wanted to get the round data, ELOs, and rankings from the tournaments of all four years, you could execute the following lines.
 
-```touch rounds.json elos.json rankings.txt
+```
+touch rounds.json elos.json rankings.txt
 python3 debate_elo.py -d ld_2017.json rounds.json
 python3 debate_elo.py -d ld_2018.json rounds.json -a
 python3 debate_elo.py -d ld_2019.json rounds.json -a
 python3 debate_elo.py -d ld_2020.json rounds.json -a
 python3 debate_elo.py -c rounds.json elos.json
-python3 debate_elo.py -r elos.json rankings.txt```
+python3 debate_elo.py -r elos.json rankings.txt
+```
 
 Notice that the `-a` flag is required if you want to combined the tournaments from multiple files into a single file of round data. Also, keep in mind that in the ELO ranking system, the order of events does matter. So, running the lines in the order above will result in a different set of rankings than if you were to run the lines flagged `-d` in a different order.
 
 Now suppose you obtain a file `rounds_ld_2021.json` which contains the round data from the year 2021. You could incorporate this new data into your previous round data, ELOs, and rankings by executing the following lines.
 
-```python3 debate_elo.py -c rounds_ld_2021.json elos.json -a
-python3 debate_elo.py -r elos.json rankings.txt```
+```
+python3 debate_elo.py -c rounds_ld_2021.json elos.json -a
+python3 debate_elo.py -r elos.json rankings.txt
+```
 
 The `-a` flag is needed in the first line in order to not overwrite the previously calculated ELOs with the ELOs from `rounds_ld_2021.json`. Instead, the program will use the ELOs already stored in `elos.json` as the initial values when compiuting the new ELOs. The `-a` flag is not needed in the final line, so the `rankings.txt` file will be overwritten with the rankings from the newly updated `elos.json` file.
 
