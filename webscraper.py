@@ -78,8 +78,11 @@ def all_rounds_from_tourney(tournament):
     return {"Tournament": tournament["Tournament"], "Rounds": rounds}
 
 
-def process_tournaments_data(tournaments_data):
+def process_tournaments_data(tournaments_data, log=print):
     tournaments = tournaments_data["Tournaments"]
-    new_tournaments = [all_rounds_from_tourney(tournament)
-                       for tournament in tournaments]
+    total_tournaments = len(tournaments)
+    new_tournaments = []
+    for i, tournament in enumerate(tournaments):
+        log(f"Processing Tournament {i+1} of {total_tournaments}...")
+        new_tournaments.append(all_rounds_from_tourney(tournament))
     return {"Tournaments": new_tournaments}
