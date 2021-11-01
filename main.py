@@ -106,33 +106,6 @@ def save_rankings(elos_file, save_file, append=False):
     save_file.write(elo_rankings)
 
 
-def main():
-    """
-    Processes a list of tournaments.
-    """
-
-    # Relevant file of URLs
-    DATASET = "new_ld_2020.json"
-
-    # Extracts URLs from file
-    tournaments_data = save_round_data(os.path.join("datasets", DATASET))
-
-    # Calculate and sort the ELOs
-    elos = {}
-    update_elos_from_tournaments_data(elos, tournaments_data)
-    elos = sort_elos(elos)
-
-    # Save all the data
-    if not os.path.exists(DATASET):
-        os.mkdir(DATASET)
-
-    print("Saving ELOs...")
-    save_elos(elos, "test2.json")
-
-    print("Saving Rankings...")
-    save_rankings(elos, "test3.json")
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Download debate round data and calculating ELO rankings.')
