@@ -1,11 +1,7 @@
 import argparse
 import json
-import os
-from urllib import parse
 from calc import calc_elo, prob_win
 from math import floor
-from time import sleep
-from urllib.parse import urlencode
 from webscraper import process_tournaments_data
 
 
@@ -15,13 +11,13 @@ def update_elos(elos, round):
     """
     aff, neg, winners = round["Aff"], round["Neg"], round["Winners"]
 
-    # Doesn't calculate the elo of rounds with no winner
     if not (aff and neg and winners):
         return elos
-    # 1000 is the baseline ELO
+
     aff_elo, neg_elo = elos.get(aff, 1000), elos.get(neg, 1000)
     exp_aff_win_prob = prob_win(aff_elo, neg_elo)
     exp_neg_win_prob = prob_win(neg_elo, aff_elo)
+
     for winner in winners:
         if winner == "AFF":
             true_aff_win_prob, true_neg_win_prob = 1, 0
@@ -29,8 +25,8 @@ def update_elos(elos, round):
             true_aff_win_prob, true_neg_win_prob = 0, 1
         aff_elo = calc_elo(aff_elo, true_aff_win_prob, exp_aff_win_prob)
         neg_elo = calc_elo(neg_elo, true_neg_win_prob, exp_neg_win_prob)
+
     elos.update({aff: aff_elo, neg: neg_elo})
-    return elos
 
 
 def sort_elos(elos):
@@ -41,6 +37,12 @@ def sort_elos(elos):
 
 
 def save_round_data(tournaments_data_file, save_file, append=False):
+    """
+    Add the processed tournaments from tournaments_data_file to save_file.
+    If append=True, the procedure avoids redownloading data from tournaments
+    that are already in save_file, and also doesn't override tournaments in
+    save_file that are not set to be downloaded from tournaments_data_file.
+    """
     tournaments_data = json.loads(tournaments_data_file.read())
 
     if append:
@@ -68,6 +70,11 @@ def save_round_data(tournaments_data_file, save_file, append=False):
 
 
 def save_elos(tournaments_data_file, save_file, append=False):
+    """
+    Add the ELOs from tournaments_data_file to save_file.
+    If append=True, the procedure takes the ELOs already in save_file
+    as starting ELO values.
+    """
     tournaments_data = json.loads(tournaments_data_file.read())
 
     if append:
@@ -88,6 +95,9 @@ def save_elos(tournaments_data_file, save_file, append=False):
 
 
 def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
+    """
+    Calls update_elos for every round in all tournaments.
+    """
     tournaments = tournaments_data["Tournaments"]
     total_tournaments = len(tournaments)
     for i, tournament in enumerate(tournaments, start=1):
@@ -99,6 +109,11 @@ def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
 
 
 def save_rankings(elos_file, save_file, append=False):
+    """
+    Adds rankings generated from elos_file to save_file.
+    The append argument doesn't do anything currently, but exists for the function to
+    match signatures with save_elos and save_round_data.
+    """
     elos = json.loads(elos_file.read())
     elo_rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
                              (name, elo) in enumerate(elos.items(), start=1))
@@ -107,6 +122,9 @@ def save_rankings(elos_file, save_file, append=False):
 
 
 def parse_args():
+    """
+    Generate a return a parse object for this program.
+    """
     parser = argparse.ArgumentParser(
         description='Download debate round data and calculating ELO rankings.')
     action_group = parser.add_mutually_exclusive_group(required=True)
@@ -141,8 +159,10 @@ def parse_args():
 
 
 def main():
+    """
+    Calls the relevant action function with the corresponding files.
+    """
     args = parse_args()
-
     with args.infile as infile, args.outfile as outfile:
         args.action(
             infile,

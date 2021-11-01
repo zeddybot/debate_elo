@@ -1,7 +1,7 @@
 def prob_win(a, b):
     """
     Calculates the chance player A will beat player B, given their respective ELOs.
-    A differential in ELOs of 400 corresponds to a 10x differential in expected
+    A differential in ELOs of 400 corresponds to a 10-times differential in expected
     win probabilities.
     """
     magnitude_score_differential = 400
@@ -10,8 +10,7 @@ def prob_win(a, b):
 
 def calc_elo(elo, true, expected):
     """
-    Calculates the increase/decrease in ELO,
-    with a K value of 32.
+    Calculates the increase/decrease in ELO, with a K value of 32.
     """
     k = 32
     return elo + k * (true - expected)

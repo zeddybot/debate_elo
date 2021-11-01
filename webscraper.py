@@ -41,6 +41,10 @@ def get_rounds(url):
 
 
 def debater_name(tag):
+    """
+    Get the name of a debater from a tag containing the debater's full
+    name, school code, and initials in multiple possible locations.
+    """
     name = tag["title"]
     words = tag.a.string.split()
     if words[-2:] == name.split():
@@ -79,6 +83,9 @@ def all_rounds_from_tourney(tournament):
 
 
 def process_tournaments_data(tournaments_data, log=print):
+    """
+    Process all the data from multiple tournaments.
+    """
     tournaments = tournaments_data["Tournaments"]
     total_tournaments = len(tournaments)
     new_tournaments = []
