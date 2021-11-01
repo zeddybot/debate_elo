@@ -6,30 +6,27 @@ from urllib.parse import urlencode
 from webscraper import process_tournaments_data
 
 
-def update_elos(elos, rounds):
+def update_elos(elos, round):
     """
-    Updates a hasmhmap of elos with a list of rounds.
+    Updates a hasmhmap of elos with a single rounds.
     """
-    for round in rounds:
-        aff = round.get("AFF")
-        neg = round.get("NEG")
-        winners = round.get("WINNERS")
+    aff, neg, winners = round["Aff"], round["Neg"], round["Winners"]
 
-        # Doesn't calculate the elo of rounds with no winner
-        if aff and neg and winners:
-            # 1000 is the baseline ELO
-            aff_elo = elos.get(aff, 1000)
-            neg_elo = elos.get(neg, 1000)
-            aff_win_prob = prob_win(aff_elo, neg_elo)
-            neg_win_prob = prob_win(neg_elo, aff_elo)
-            for win in winners:
-                if win == "AFF":
-                    aff_elo = calc_elo(aff_elo, 1, aff_win_prob)
-                    neg_elo = calc_elo(neg_elo, 0, neg_win_prob)
-                elif win == "NEG":
-                    aff_elo = calc_elo(aff_elo, 0, aff_win_prob)
-                    neg_elo = calc_elo(neg_elo, 1, neg_win_prob)
-            elos.update({aff: aff_elo, neg: neg_elo})
+    # Doesn't calculate the elo of rounds with no winner
+    if not (aff and neg and winners):
+        return elos
+    # 1000 is the baseline ELO
+    aff_elo, neg_elo = elos.get(aff, 1000), elos.get(neg, 1000)
+    exp_aff_win_prob = prob_win(aff_elo, neg_elo)
+    exp_neg_win_prob = prob_win(neg_elo, aff_elo)
+    for winner in winners:
+        if winner == "AFF":
+            true_aff_win_prob, true_neg_win_prob = 1, 0
+        elif winner == "NEG":
+            true_aff_win_prob, true_neg_win_prob = 0, 1
+        aff_elo = calc_elo(aff_elo, true_aff_win_prob, exp_aff_win_prob)
+        neg_elo = calc_elo(neg_elo, true_neg_win_prob, exp_neg_win_prob)
+    elos.update({aff: aff_elo, neg: neg_elo})
     return elos
 
 
@@ -42,10 +39,12 @@ def sort_elos(elos):
 
 def prob_win(a, b):
     """
-    Calculates the chance player A will beat player B,
-    given their respective ELOs.
+    Calculates the chance player A will beat player B, given their respective ELOs.
+    A differential in ELOs of 400 corresponds to a 10x differential in expected
+    win probabilities.
     """
-    return 1 / (1 + (10 ** ((b - a) / 400)))
+    magnitude_score_differential = 400
+    return 1 / (1 + (10 ** ((b - a) / magnitude_score_differential)))
 
 
 def calc_elo(elo, true, expected):
@@ -53,33 +52,8 @@ def calc_elo(elo, true, expected):
     Calculates the increase/decrease in ELO,
     with a K value of 32.
     """
-    return elo + 32 * (true - expected)
-
-
-def calc_winrates(rounds):
-    winrates = {}
-
-    for round in rounds:
-        aff = round.get("AFF")
-        neg = round.get("NEG")
-        winners = round.get("WINNERS")
-        if aff and neg and winners:
-            aff_wins = winners.count("AFF")
-            neg_wins = winners.count("NEG")
-            aff_wr = winrates.get(aff, [0, 0])
-            neg_wr = winrates.get(neg, [0, 0])
-            aff_wr[0] += aff_wins
-            neg_wr[0] += neg_wins
-            aff_wr[1] += aff_wins + neg_wins
-            neg_wr[1] += aff_wins + neg_wins
-            winrates.update({aff: aff_wr, neg: neg_wr})
-    return winrates
-
-
-def sort_and_eval_winrates(winrates):
-    items = [(name, wins / rounds)
-             for name, (wins, rounds) in winrates.items() if rounds > 0]
-    return dict(sorted(items, key=lambda item: item[1], reverse=True))
+    k = 32
+    return elo + k * (true - expected)
 
 
 def save_round_data(path_to_tournament_data, path_to_save):
@@ -95,6 +69,32 @@ def save_round_data(path_to_tournament_data, path_to_save):
     with open(path_to_save, "w") as f:
         f.write(json.dumps(new_tournaments_data))
 
+    return new_tournaments_data
+
+
+def save_elos(elos, path_to_save):
+    elos_json = json.dumps(elos)
+    with open(path_to_save, "w") as f:
+        f.write(elos_json)
+
+
+def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
+    tournaments = tournaments_data["Tournaments"]
+    total_tournaments = len(tournaments)
+    for i, tournament in enumerate(tournaments, start=1):
+        log(f"Calculating ELOs from tournament {i} of {total_tournaments}...")
+        rounds = tournament["Rounds"]
+        for round in rounds:
+            update_elos(elos, round)
+    return elos
+
+
+def save_rankings(elos, path_to_save):
+    elo_rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
+                             (name, elo) in enumerate(elos.items(), start=1))
+    with open(path_to_save, "w") as f:
+        f.write(elo_rankings)
+
 
 def main():
     """
@@ -105,51 +105,22 @@ def main():
     DATASET = "new_ld_2020.json"
 
     # Extracts URLs from file
-    save_round_data(os.path.join("datasets", DATASET))
+    tournaments_data = save_round_data(os.path.join("datasets", DATASET))
 
-    # # Calculate and sort the ELOs
-    # print("Calculting ELOs...")
-    # elos = update_elos({}, rounds)
+    # Calculate and sort the ELOs
+    elos = {}
+    update_elos_from_tournaments_data(elos, tournaments_data)
+    elos = sort_elos(elos)
 
-    # print("Sorting ELOS...")
-    # elos = sort_elos(elos)
+    # Save all the data
+    if not os.path.exists(DATASET):
+        os.mkdir(DATASET)
 
-    # # Calculate and sort the Winrates
-    # print("Calculating winrates...")
-    # winrates = calc_winrates(rounds)
+    print("Saving ELOs...")
+    save_elos(elos, "test2.json")
 
-    # print("Sorting winrates...")
-    # winrates = sort_and_eval_winrates(winrates)
-
-    # # Save all the data
-    # if not os.path.exists(DATASET):
-    #     os.mkdir(DATASET)
-
-    # print("Saving Rounds...")
-    # rounds_json = json.dumps(rounds)
-    # with open(os.path.join(DATASET, "rounds.txt"), "w") as f:
-    #     f.write(rounds_json)
-
-    # print("Saving ELOs...")
-    # elos_json = json.dumps(elos)
-    # with open(os.path.join(DATASET, "elos.txt"), "w") as f:
-    #     f.write(elos_json)
-
-    # print("Saving winrates...")
-    # winrates_json = json.dumps(winrates)
-    # with open(os.path.join(DATASET, "winrates.txt"), "w") as f:
-    #     f.write(winrates_json)
-
-    # print("Saving Rankings...")
-    # elo_rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
-    #                          (name, elo) in enumerate(elos.items(), 1))
-    # with open(os.path.join(DATASET, "elo_rankings.txt"), "w") as f:
-    #     f.write(elo_rankings)
-
-    # wr_rankings = "\n".join(f"{n}. {name}: {winrate * 100}" for n,
-    #                         (name, winrate) in enumerate(winrates.items(), 1))
-    # with open(os.path.join(DATASET, "winrate_rankings.txt"), "w") as f:
-    #     f.write(wr_rankings)
+    print("Saving Rankings...")
+    save_rankings(elos, "test3.json")
 
 
 if __name__ == "__main__":
