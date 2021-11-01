@@ -2,6 +2,48 @@ from urllib.parse import urlencode
 from web_utils import get_html
 
 
+def process_tournaments_data(tournaments_data, log=print):
+    """
+    Process all the data from multiple tournaments.
+    """
+    tournaments = tournaments_data["Tournaments"]
+    total_tournaments = len(tournaments)
+    new_tournaments = []
+    for i, tournament in enumerate(tournaments, start=1):
+        log(f"Downloading data from tournament {i} of {total_tournaments}...")
+        new_tournaments.append(all_rounds_from_tourney(tournament))
+    return {"Tournaments": new_tournaments}
+
+
+def all_rounds_from_tourney(tournament):
+    """
+    Processes all the rounds from a tournament.
+    """
+    round_urls = get_round_urls(tournament_to_url(tournament))
+    rounds = [process_round(round) for round_url in round_urls
+              for round in get_rounds(round_url)]
+    return {"Tournament": tournament["Tournament"], "Rounds": rounds}
+
+
+def process_round(round):
+    """
+    Converts the BS4 Tree of a round into a
+    dictionary of relevant information.
+    """
+    raw_info = [item for item in round.find_all(
+        "td") if item["class"] == ["smallish"]]
+    aff_tag, neg_tag, *rest_tags = raw_info
+    aff, neg = debater_name(aff_tag), debater_name(neg_tag)
+    if rest_tags:
+        winner_tag = rest_tags[0]
+        winners = [div.string.strip().upper()
+                   for div in winner_tag.find_all("div")]
+    else:
+        winners = []
+
+    return {"Aff": aff, "Neg": neg, "Winners": winners}
+
+
 def tournament_to_url(tournament):
     """
     Convert a list of tournaments to a url that can be accessed
@@ -51,45 +93,3 @@ def debater_name(tag):
         return ' '.join(words)
     else:
         return ' '.join(words[:-1]) + ' ' + name
-
-
-def process_round(round):
-    """
-    Converts the BS4 Tree of a round into a
-    dictionary of relevant information.
-    """
-    raw_info = [item for item in round.find_all(
-        "td") if item["class"] == ["smallish"]]
-    aff_tag, neg_tag, *rest_tags = raw_info
-    aff, neg = debater_name(aff_tag), debater_name(neg_tag)
-    if rest_tags:
-        winner_tag = rest_tags[0]
-        winners = [div.string.strip().upper()
-                   for div in winner_tag.find_all("div")]
-    else:
-        winners = []
-
-    return {"Aff": aff, "Neg": neg, "Winners": winners}
-
-
-def all_rounds_from_tourney(tournament):
-    """
-    Processes all the rounds from a tournament.
-    """
-    round_urls = get_round_urls(tournament_to_url(tournament))
-    rounds = [process_round(round) for round_url in round_urls
-              for round in get_rounds(round_url)]
-    return {"Tournament": tournament["Tournament"], "Rounds": rounds}
-
-
-def process_tournaments_data(tournaments_data, log=print):
-    """
-    Process all the data from multiple tournaments.
-    """
-    tournaments = tournaments_data["Tournaments"]
-    total_tournaments = len(tournaments)
-    new_tournaments = []
-    for i, tournament in enumerate(tournaments, start=1):
-        log(f"Downloading data from tournament {i} of {total_tournaments}...")
-        new_tournaments.append(all_rounds_from_tourney(tournament))
-    return {"Tournaments": new_tournaments}

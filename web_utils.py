@@ -4,6 +4,19 @@ from requests import get
 from requests.exceptions import RequestException
 
 
+def get_html(url):
+    """
+    Parses a response into a BS4 tree, raising exceptions 
+    as they come up.
+    """
+    response = simple_get(url)
+    if response is not None:
+        html = BeautifulSoup(response, "html.parser")
+        return html
+    else:
+        raise Exception(f"Error retrieving contents at {url}")
+
+
 def simple_get(url):
     """
     Attempts to get the content at a url by making an HTTP GET request.
@@ -38,16 +51,3 @@ def log_error(e):
     Logs an error to the console.
     """
     print(e)
-
-
-def get_html(url):
-    """
-    Parses a response into a BS4 tree, raising exceptions 
-    as they come up.
-    """
-    response = simple_get(url)
-    if response is not None:
-        html = BeautifulSoup(response, "html.parser")
-        return html
-    else:
-        raise Exception(f"Error retrieving contents at {url}")
