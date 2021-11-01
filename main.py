@@ -1,5 +1,7 @@
+import argparse
 import json
 import os
+from urllib import parse
 from calc import calc_elo, prob_win
 from math import floor
 from time import sleep
@@ -38,26 +40,42 @@ def sort_elos(elos):
     return dict(sorted(elos.items(), key=lambda item: item[1], reverse=True))
 
 
-def save_round_data(path_to_tournament_data, path_to_save):
-    # Extracts URLs from file
-    with open(path_to_tournament_data, "r") as f:
-        tournaments_data = json.loads(f.read())
+def save_round_data(tournaments_data_file, save_file, append=False):
+    tournaments_data = json.loads(tournaments_data_file.read())
 
-    # Process all tournaments into a list of hashmaps,
-    # and print updates after every tournament is processed.
+    if append:
+        try:
+            old_tournaments_data = json.loads(save_file.read())
+        except json.decoder.JSONDecodeError:
+            old_tournaments_data = {"Tournaments": []}
+        tournaments_to_remove = [tournament["Tournament"]
+                                 for tournament in old_tournaments_data["Tournaments"]]
+        filtered_tournaments = [tournament for tournament in tournaments_data["Tournaments"]
+                                if tournament["Tournament"] not in tournaments_to_remove]
+        tournaments_data["Tournaments"] = filtered_tournaments
 
     new_tournaments_data = process_tournaments_data(tournaments_data)
+    combined_tournaments = (new_tournaments_data["Tournaments"]
+                            + old_tournaments_data["Tournaments"])
+    new_tournaments_data["Tournaments"] = combined_tournaments
 
-    with open(path_to_save, "w") as f:
-        f.write(json.dumps(new_tournaments_data))
-
-    return new_tournaments_data
+    save_file.write(json.dumps(new_tournaments_data))
 
 
-def save_elos(elos, path_to_save):
+def save_elos(tournaments_data_file, save_file, append=False):
+    tournaments_data = json.loads(tournaments_data_file.read())
+
+    if append:
+        try:
+            elos = json.loads(save_file.read())
+        except json.decoder.JSONDecodeError:
+            elos = {}
+    else:
+        elos = {}
+    update_elos_from_tournaments_data(elos, tournaments_data)
+    elos = sort_elos(elos)
     elos_json = json.dumps(elos)
-    with open(path_to_save, "w") as f:
-        f.write(elos_json)
+    save_file.write(elos_json)
 
 
 def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
@@ -71,11 +89,12 @@ def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
     return elos
 
 
-def save_rankings(elos, path_to_save):
+def save_rankings(elos_file, save_file, append=False):
+    elos = json.loads(elos_file.read())
     elo_rankings = "\n".join(f"{n}. {name}: {floor(elo)}" for n,
                              (name, elo) in enumerate(elos.items(), start=1))
-    with open(path_to_save, "w") as f:
-        f.write(elo_rankings)
+    print("Saving Rankings...")
+    save_file.write(elo_rankings)
 
 
 def main():
@@ -103,6 +122,52 @@ def main():
 
     print("Saving Rankings...")
     save_rankings(elos, "test3.json")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Download debate round data and calculating ELO rankings.')
+    action_group = parser.add_mutually_exclusive_group(required=True)
+    action_group.add_argument(
+        '-d', '--download',
+        dest='action',
+        action='store_const',
+        const=save_round_data,
+    )
+    action_group.add_argument(
+        '-c', '--calculate',
+        dest='action',
+        action='store_const',
+        const=save_elos,
+    )
+    action_group.add_argument(
+        '-r', '--rank',
+        dest='action',
+        action='store_const',
+        const=save_rankings,
+    )
+    parser.add_argument(
+        '-a',
+        '--append',
+        action='store_true',
+        help='Avoids overwriting data.',
+    )
+    parser.add_argument('infile', type=argparse.FileType('r'))
+    parser.add_argument('outfile', type=argparse.FileType('w+'))
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    with args.infile as infile, args.outfile as outfile:
+        args.action(
+            infile,
+            outfile,
+            append=args.append
+        )
+    print("Done.")
 
 
 if __name__ == "__main__":
