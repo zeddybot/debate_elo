@@ -48,17 +48,22 @@ def save_round_data(tournaments_data_file, save_file, append=False):
             old_tournaments_data = json.loads(save_file.read())
         except json.decoder.JSONDecodeError:
             old_tournaments_data = {"Tournaments": []}
-        tournaments_to_remove = [tournament["Tournament"]
-                                 for tournament in old_tournaments_data["Tournaments"]]
-        filtered_tournaments = [tournament for tournament in tournaments_data["Tournaments"]
-                                if tournament["Tournament"] not in tournaments_to_remove]
-        tournaments_data["Tournaments"] = filtered_tournaments
+    else:
+        old_tournaments_data = {"Tournaments": []}
+
+    tournaments_to_remove = [tournament["Tournament"]
+                             for tournament in old_tournaments_data["Tournaments"]]
+    filtered_tournaments = [tournament for tournament in tournaments_data["Tournaments"]
+                            if tournament["Tournament"] not in tournaments_to_remove]
+    tournaments_data["Tournaments"] = filtered_tournaments
 
     new_tournaments_data = process_tournaments_data(tournaments_data)
     combined_tournaments = (new_tournaments_data["Tournaments"]
                             + old_tournaments_data["Tournaments"])
     new_tournaments_data["Tournaments"] = combined_tournaments
 
+    save_file.seek(0)
+    save_file.truncate()
     save_file.write(json.dumps(new_tournaments_data))
 
 
@@ -72,9 +77,13 @@ def save_elos(tournaments_data_file, save_file, append=False):
             elos = {}
     else:
         elos = {}
+
     update_elos_from_tournaments_data(elos, tournaments_data)
     elos = sort_elos(elos)
     elos_json = json.dumps(elos)
+
+    save_file.seek(0)
+    save_file.truncate()
     save_file.write(elos_json)
 
 
@@ -153,7 +162,7 @@ def parse_args():
         help='Avoids overwriting data.',
     )
     parser.add_argument('infile', type=argparse.FileType('r'))
-    parser.add_argument('outfile', type=argparse.FileType('w+'))
+    parser.add_argument('outfile', type=argparse.FileType('r+'))
 
     return parser.parse_args()
 
