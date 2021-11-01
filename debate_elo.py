@@ -122,8 +122,8 @@ def save_round_data(tournaments_data_file, save_file, append=False):
     tournaments_data["Tournaments"] = filtered_tournaments
 
     new_tournaments_data = process_tournaments_data(tournaments_data)
-    combined_tournaments = (new_tournaments_data["Tournaments"]
-                            + old_tournaments_data["Tournaments"])
+    combined_tournaments = (old_tournaments_data["Tournaments"]
+                            + new_tournaments_data["Tournaments"])
     new_tournaments_data["Tournaments"] = combined_tournaments
 
     save_file.seek(0)
