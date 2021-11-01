@@ -137,6 +137,8 @@ def save_elos(tournaments_data_file, save_file, append=False):
     If append=True, the procedure takes the ELOs already in save_file
     as starting ELO values.
     """
+    print("Calculating ELOs...")
+
     tournaments_data = json.loads(tournaments_data_file.read())
 
     if append:
@@ -151,6 +153,7 @@ def save_elos(tournaments_data_file, save_file, append=False):
     elos = sort_elos(elos)
     elos_json = json.dumps(elos)
 
+    print('Saving ELOs...')
     save_file.seek(0)
     save_file.truncate()
     save_file.write(elos_json)
@@ -169,14 +172,13 @@ def save_rankings(elos_file, save_file, append=False):
     save_file.write(elo_rankings)
 
 
-def update_elos_from_tournaments_data(elos, tournaments_data, log=print):
+def update_elos_from_tournaments_data(elos, tournaments_data):
     """
     Calls update_elos for every round in all tournaments.
     """
     tournaments = tournaments_data["Tournaments"]
     total_tournaments = len(tournaments)
     for i, tournament in enumerate(tournaments, start=1):
-        log(f"Calculating ELOs from tournament {i} of {total_tournaments}...")
         rounds = tournament["Rounds"]
         for round in rounds:
             update_elos(elos, round)
